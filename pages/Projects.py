@@ -1,6 +1,8 @@
 import streamlit as st
-
+import tweepy
 
 st.title("Projects")
-
-# st.write("You have entered", st.session_state["my_input"])
+auth = tweepy.OAuth2AppHandler(
+    "API / Consumer Key here", "API / Consumer Secret here"
+)
+api = tweepy.API(auth)
