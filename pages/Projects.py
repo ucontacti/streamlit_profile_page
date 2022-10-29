@@ -1,5 +1,3 @@
-from re import S
-from nbformat import write
 import streamlit as st
 import tweepy
 from config import tweepy_token
@@ -24,20 +22,25 @@ for loc in locations:
 	if loc['placeType']['name'] == 'Country':
 		loc_woeid_dict[f"{loc['name']} ({loc['placeType']['name']})"] = loc['woeid']
 
-if 'country' not in st.session_state or not 'topics' in st.session_state or not 'trends_json' in st.session_state:
+if 'country' not in st.session_state or \
+	'topics' not in st.session_state or \
+	'trends_json' not in st.session_state:
 	st.session_state['country'] = ""
 	st.session_state['topics'] = []
 	st.session_state['trends_json'] = {}
 
 def get_trending_topic(loc_woeid_dict):
+	print(st.session_state['country'])
 	st.session_state['trends_json'] = json.loads(json.dumps(api.get_place_trends(loc_woeid_dict[st.session_state['country']]), indent=1))
 
+st.session_state['country_new'] = st.session_state['country']
 st.session_state['country'] = st.selectbox(
 	'Available countries for hot topics in Twitter:',
-	loc_woeid_dict.keys(),
-	on_change = get_trending_topic,
-	args=[loc_woeid_dict]
+	loc_woeid_dict.keys()
 	)
+	
+if st.session_state['country'] != st.session_state['country_new']:
+	get_trending_topic(loc_woeid_dict)
 
 # st.write('You selected country :', st.session_state['country'])
 
