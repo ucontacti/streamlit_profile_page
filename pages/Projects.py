@@ -65,6 +65,7 @@ if st.button('Press to Query'):
 	tweets_data = response.json()['data']
 	tweet_df = pd.json_normalize(tweets_data) 
 	st.dataframe(tweet_df)
+	tweet_df.to_csv('tweets.csv')
 
 # if st.button('Press to apply sentiment analysis'):
 
