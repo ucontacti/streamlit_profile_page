@@ -12,22 +12,6 @@ from sentiment_analyzer import text_cleaner, lemmatize_text, \
 
 st.markdown('### Twitter hot topic Sentimental Analysis')
 
-
-
-auth = tweepy.OAuthHandler(tweepy_token.API_KEY, tweepy_token.API_SECRET)
-auth.set_access_token(tweepy_token.ACCESS_TOKEN, tweepy_token.ACCESS_TOKEN_SECRET)
-
-api = tweepy.API(auth, wait_on_rate_limit=True)
-client = tweepy.Client(bearer_token=tweepy_token.BEARER_TOKEN, return_type=requests.Response)
-
-
-locations = json.loads(json.dumps(api.available_trends(), indent=1))
-
-loc_woeid_dict = {}
-for loc in locations:
-	if loc['placeType']['name'] == 'Country':
-		loc_woeid_dict[f"{loc['name']} ({loc['placeType']['name']})"] = loc['woeid']
-
 if 'country' not in st.session_state or \
 	'topics' not in st.session_state or \
 	'trends_json' not in st.session_state or\
@@ -37,11 +21,31 @@ if 'country' not in st.session_state or \
 	st.session_state['trends_json'] = {}
 	st.session_state['df_not_exists'] = True
 
+
+# Load tweepy tokens
+auth = tweepy.OAuthHandler(tweepy_token.API_KEY, tweepy_token.API_SECRET)
+auth.set_access_token(tweepy_token.ACCESS_TOKEN, tweepy_token.ACCESS_TOKEN_SECRET)
+
+api = tweepy.API(auth, wait_on_rate_limit=True)
+client = tweepy.Client(bearer_token=tweepy_token.BEARER_TOKEN, return_type=requests.Response)
+
+# Query available locations in twitter
+locations = json.loads(json.dumps(api.available_trends(), indent=1))
+
+# Create a dictionary of countries and WOEID
+loc_woeid_dict = {}
+for loc in locations:
+	if loc['placeType']['name'] == 'Country':
+		loc_woeid_dict[f"{loc['name']} ({loc['placeType']['name']})"] = loc['woeid']
+
+# Gets called if country changes
 def get_trending_topic(loc_woeid_dict):
+	# Queries list of hot topics given a country
 	st.session_state['trends_json'] = json.loads(json.dumps(api.get_place_trends(loc_woeid_dict[st.session_state['country']]), indent=1))
 	st.session_state['df_not_exists'] = True
 
 st.session_state['country_new'] = st.session_state['country']
+# Country selectobx
 st.session_state['country'] = st.selectbox(
 	'Available countries for hot topics in Twitter:',
 	loc_woeid_dict.keys()
@@ -53,11 +57,13 @@ if st.session_state['country'] != st.session_state['country_new']:
 # st.write('You selected country :', st.session_state['country'])
 
 
+# List trending topic
 trends_topic = []
 if st.session_state['trends_json'] != {}:
 	for trend in st.session_state['trends_json'][0]["trends"]:	
 		trends_topic.append(trend["name"].strip("#"))
 
+# Selecting topic
 st.session_state['topics'] = st.multiselect(
 	'Choose one or more topics (additional topics will restrict your query not extend):',
 	trends_topic
@@ -65,8 +71,10 @@ st.session_state['topics'] = st.multiselect(
 
 # st.write('You selected:', st.session_state['topics'])
 
+# Twitter query with given topics, only english, no retweets
 query = f"{' '.join(st.session_state['topics'])} lang:en -is:retweet"
 
+# Run query and store in a Dataframe
 if st.button('Press to Query'):
 	response = client.search_recent_tweets(query=query, max_results=50, tweet_fields=['text', 'lang', 'geo'])
 	tweets_data = response.json()['data']
@@ -76,6 +84,7 @@ if st.button('Press to Query'):
 	st.session_state['df_not_exists'] = False
 	# st.session_state.tweet_df.to_csv('tweets.csv')
 
+# Apply sentimental analysis on the text and plot
 if st.button('Press to apply sentiment analysis', disabled=st.session_state['df_not_exists']):
 	st.session_state.tweet_df['clean_text'] = st.session_state.tweet_df['text'].apply(lemmatize_text)
 	st.session_state.tweet_df["polarity"] = st.session_state.tweet_df["clean_text"].apply(getPolarity)
@@ -106,6 +115,6 @@ if st.button('Press to apply sentiment analysis', disabled=st.session_state['df_
 		plt.title('Subjectivity Pie Chart')
 		
 		st.pyplot(fig1)
-# TODO: add code comment
+
+
 # TODO: make second for pure text
-# TODO: add better readme
