@@ -8,8 +8,8 @@ import geopandas as gpd
 # @st.cache
 def read_and_retrieve():
     data = pd.read_csv('../US_Accidents_Dec21_updated.csv',
-            nrows=1000,
-            usecols=['Start_Lng', 'Start_Lat', 'Severity', 'County', 'State']
+            nrows=100000,
+            usecols=['Start_Lng', 'Start_Lat', 'Severity', 'County', 'State', 'Start_Time']
             )
     data.dropna(inplace=True)
     return data
@@ -19,11 +19,16 @@ def mpoint(lat, lon):
 
 
 df = read_and_retrieve()
+df['Year'] = pd.DatetimeIndex(df['Start_Time']).year
 
-scale = st.selectbox(
+scale = st.radio(
     'What Scale would like to chose?',
     ('County', 'State'))
+year = st.slider('Select specific year?', 2016, 2021, 2016)
+df = df.drop(df[df.Year != year].index)
 
+if df.empty:
+    st.info("nothing to show!")
 
 agg_df = df.groupby(scale).agg(
         Scale=(scale, 'last'),
@@ -147,8 +152,7 @@ st.pydeck_chart(pdk.Deck(
 ))
 
 
-# TODO: by City, County, State, Zipcode
+# TODO: by City, Zipcode
 # TODO: add different color for different scales
-# TODO: add year selector
 # TODO: Add column selector
 
