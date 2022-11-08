@@ -9,7 +9,7 @@ import geopandas as gpd
 def read_and_retrieve():
     data = pd.read_csv('../US_Accidents_Dec21_updated.csv',
             nrows=1000,
-            usecols=['Start_Lng', 'Start_Lat', 'Severity', 'City', 'State']
+            usecols=['Start_Lng', 'Start_Lat', 'Severity', 'County', 'State']
             )
     data.dropna(inplace=True)
     return data
@@ -19,21 +19,24 @@ def mpoint(lat, lon):
 
 
 df = read_and_retrieve()
-df.rename(columns={'Start_Lng':'lon','Start_Lat': 'lat'}, inplace=True)
 
-df = df.groupby('State').agg(
-        State=('State', 'last'),
+scale = st.selectbox(
+    'What Scale would like to chose?',
+    ('County', 'State'))
+
+
+agg_df = df.groupby(scale).agg(
+        Scale=(scale, 'last'),
         Count=('Severity', 'count'),
         Avg_Severity=('Severity', 'mean'),
-        lon=('lon', 'mean'),
-        lat=('lat', 'mean')
+        lon=('Start_Lng', 'mean'),
+        lat=('Start_Lat', 'mean')
     )
 
 with st.expander("DataFrame ⤵️"):
-    st.dataframe(df)
+    st.dataframe(agg_df)
 
-
-midpoint = mpoint(df["lat"], df["lon"])
+midpoint = mpoint(agg_df["lat"], agg_df["lon"])
 
 @st.cache
 def get_geom_data(category):
@@ -61,14 +64,16 @@ def get_geom_data(category):
     gdf = gpd.read_file(links[category])
     return gdf
 
+# FIXME: check either can to cache or not
 @st.cache
 def get_inventory_data(df, scale):
-    if "county" == scale:
-        df["county_fips"] = df["county_fips"].map(str)
-        df["county_fips"] = df["county_fips"].str.zfill(5)
-    elif "state" == scale:
-        df["STUSPS"] = df["State"].str.upper()
-    elif "zip" == scale:
+    if scale == "county":
+    #     # df["county_fips"] = df["County"].map(str)
+    #     # df["county_fips"] = df["county_fips"].str.zfill(5)
+        df["county_name"] = df["Scale"]
+    elif scale == "state":
+        df["STUSPS"] = df["Scale"].str.upper()
+    elif scale == "zip":
         df["postal_code"] = df["postal_code"].map(str)
         df["postal_code"] = df["postal_code"].str.zfill(5)
 
@@ -78,7 +83,7 @@ def join_attributes(gdf, df, category):
 
     new_gdf = None
     if category == "county":
-        new_gdf = gdf.merge(df, left_on="GEOID", right_on="county_fips", how="outer")
+        new_gdf = gdf.merge(df, left_on="NAME", right_on="county_name", how="inner")
     elif category == "state":
         new_gdf = gdf.merge(df, left_on="STUSPS", right_on="STUSPS", how="outer")
     elif category == "national":
@@ -101,13 +106,15 @@ def select_null(gdf, col_name):
     new_gdf = gdf[gdf[col_name].isna()]
     return new_gdf
 
-inventory_df = get_inventory_data(df, 'state')
 
-gdf = get_geom_data('state')
-gdf = join_attributes(gdf, inventory_df, 'state')
+inventory_df = get_inventory_data(agg_df, scale.lower())
+
+gdf = get_geom_data(scale.lower())
+gdf = join_attributes(gdf, inventory_df, scale.lower())
+
+
 gdf_null = select_null(gdf, 'Avg_Severity')
 gdf = select_non_null(gdf, 'Avg_Severity')
-
 
 
 geojson = pdk.Layer(
