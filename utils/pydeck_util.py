@@ -6,7 +6,7 @@ def mpoint(lat, lon):
 
 
 def get_geom_data(category):
-
+    # Get geomerty data for different scales
     prefix = (
         "https://raw.githubusercontent.com/giswqs/streamlit-geospatial/master/data/"
     )
@@ -33,7 +33,6 @@ def select_non_null(gdf, col_name):
 
 
 def join_attributes(gdf, df, category):
-
     new_gdf = None
     if category == "county":
         new_gdf = gdf.merge(df, left_on="NAME", right_on="county_name", how="inner")

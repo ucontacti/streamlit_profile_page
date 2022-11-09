@@ -10,24 +10,24 @@ from utils.pydeck_util import mpoint, get_geom_data, \
 
 st.set_page_config(layout="wide")
 
+
 @st.cache
 def read_and_retrieve():
+    '''Read the US 2016-2021 accident records'''
     data = pd.read_csv('../US_Accidents_Dec21_updated.csv',
-            nrows=10000,
+            # nrows=10000,
             usecols=['Start_Lng', 'Start_Lat', 'Severity', 'County', 'State', 'Zipcode', 'Start_Time']
             )
     data.dropna(inplace=True)
     data['Year'] = pd.DatetimeIndex(data['Start_Time']).year
     return data
 
-
 df = read_and_retrieve()
 
-
+# Options to chose the dataset
 row1_col1, row1_col2, row1_col3 = st.columns(
     [2, 3, 2]
 )
-
 with row1_col1:
     scale = st.radio(
         'What Scale would like to chose?',
@@ -38,11 +38,13 @@ with row1_col2:
 
 with row1_col3:
     selected_indc = st.selectbox("Indicator",
-            ('number_of_incidents', 'avg_severity'))
+            ('incidents_rate', 'avg_severity'))
 
+
+# Apply an aggregate on selected options
 agg_df = df[df.Year == year].groupby(scale).agg(
         Name=(scale, 'last'),
-        number_of_incidents=('Severity', 'count'),
+        incidents_rate=('Severity', 'count'),
         avg_severity=('Severity', 'mean'),
         lon=('Start_Lng', 'mean'),
         lat=('Start_Lat', 'mean')
@@ -54,12 +56,8 @@ if agg_df.empty:
 with st.expander("DataFrame ⤵️"):
     st.dataframe(agg_df)
 
-midpoint = mpoint(agg_df["lat"], agg_df["lon"])
-
-
-
-
-
+agg_df['incidents_rate'] = agg_df['incidents_rate'] / agg_df['incidents_rate'].max()
+# Color Pallete configuration
 row2_col1, row2_col2, row2_col3 = st.columns(
     [1, 2, 1]
 )
@@ -75,6 +73,8 @@ with row2_col3:
 colors = cm.get_palette(palette, n_colors)
 colors = [hex_to_rgb(c) for c in colors]
 
+
+# Create Geo Dataframe for selected Scale
 inventory_df = get_inventory_data(agg_df, scale.lower())
 
 gdf = get_geom_data(scale.lower())
@@ -84,6 +84,7 @@ gdf = join_attributes(gdf, inventory_df, scale.lower())
 gdf = select_non_null(gdf, selected_indc)
 gdf = gdf.sort_values(by=selected_indc, ascending=True)
 
+# Generate color spectrum
 for i, ind in enumerate(gdf.index):
     index = int(i / (len(gdf) / len(colors)))
     if index >= len(colors):
@@ -96,8 +97,10 @@ for i, ind in enumerate(gdf.index):
 min_value = gdf[selected_indc].min()
 max_value = gdf[selected_indc].max()
 color_exp = f"[R, G, B]"
+midpoint = mpoint(agg_df["lat"], agg_df["lon"])
 
-elevation = 300 if selected_indc == 'number_of_incidents' else 50000
+# Configurating PyDeck layer and tooltip
+elevation = 500000 if selected_indc == 'incidents_rate' else 50000
 geojson = pdk.Layer(
     "GeoJsonLayer",
     gdf,
@@ -114,13 +117,6 @@ geojson = pdk.Layer(
     get_line_width=2,
     line_width_min_pixels=1,
 )
-
-
-row3_col1, row3_col2 = st.columns(
-    [6, 1]
-)
-
-# tooltip_value = f"<b>Value:</b> {median_listing_price}""
 tooltip = {
     "html": "<b>Name:</b> {Name}<br><b>Value:</b> {"
     + selected_indc
@@ -128,19 +124,26 @@ tooltip = {
     "style": {"backgroundColor": "steelblue", "color": "white"},
 }
 
+
+row3_col1, row3_col2 = st.columns(
+    [6, 1]
+)
+
+# Generate 3D view map
 with row3_col1:
     st.pydeck_chart(pdk.Deck(
         map_style="mapbox://styles/mapbox/light-v9",
         initial_view_state=pdk.ViewState(
             latitude=midpoint[0],
             longitude=midpoint[1],
-            zoom=3.35,
+            zoom=3,
             pitch=40,
         ),
         layers=[geojson],
         tooltip=tooltip
     ))
 
+# Generate colormap
 with row3_col2:
     st.write(
         cm.create_colormap(
@@ -154,7 +157,6 @@ with row3_col2:
             font_size=10,
         )
     )
+
 # TODO: by City, Zipcode
-# TODO: Clean code 
-# TODO: Add documentation
 # TODO: Add more columns
