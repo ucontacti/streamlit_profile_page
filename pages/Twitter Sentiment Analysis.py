@@ -6,9 +6,11 @@ import requests
 import matplotlib.pyplot as plt
 
 from config import tweepy_token
-from sentiment_analyzer import text_cleaner, lemmatize_text, \
+from utils.sentiment_analyzer import text_cleaner, lemmatize_text, \
 								getPolarity, getPolAnalysis, \
 								getSubjectivity, getSubAnalysis
+
+st.set_page_config(layout="wide")
 
 st.markdown('### Twitter hot topic Sentimental Analysis')
 

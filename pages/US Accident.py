@@ -2,137 +2,75 @@
 import pandas as pd
 import pydeck as pdk
 import streamlit as st
-import numpy as np
-import geopandas as gpd
-import pathlib
-import requests
-import zipfile
-import os
 import leafmap.colormaps as cm
 from leafmap.common import hex_to_rgb
+from utils.pydeck_util import mpoint, get_geom_data, \
+                            get_inventory_data, select_non_null,\
+                            join_attributes
 
-# @st.cache
+st.set_page_config(layout="wide")
+
+@st.cache
 def read_and_retrieve():
     data = pd.read_csv('../US_Accidents_Dec21_updated.csv',
             nrows=10000,
             usecols=['Start_Lng', 'Start_Lat', 'Severity', 'County', 'State', 'Zipcode', 'Start_Time']
             )
     data.dropna(inplace=True)
+    data['Year'] = pd.DatetimeIndex(data['Start_Time']).year
     return data
-
-def mpoint(lat, lon):
-    return (np.average(lat), np.average(lon))
 
 
 df = read_and_retrieve()
-df['Year'] = pd.DatetimeIndex(df['Start_Time']).year
 
-scale = st.radio(
-    'What Scale would like to chose?',
-    ('County', 'State', 'Zipcode'))
-year = st.slider('Year', 2016, 2021, 2016)
-df = df.drop(df[df.Year != year].index)
 
-if df.empty:
-    st.info("nothing to show!")
+row1_col1, row1_col2, row1_col3 = st.columns(
+    [2, 3, 2]
+)
 
-agg_df = df.groupby(scale).agg(
-        Scale=(scale, 'last'),
-        Count=('Severity', 'count'),
-        Avg_Severity=('Severity', 'mean'),
+with row1_col1:
+    scale = st.radio(
+        'What Scale would like to chose?',
+        ('County', 'State'))
+
+with row1_col2:
+    year = st.slider('Year', 2016, 2021, 2016)
+
+with row1_col3:
+    selected_indc = st.selectbox("Indicator",
+            ('number_of_incidents', 'avg_severity'))
+
+agg_df = df[df.Year == year].groupby(scale).agg(
+        Name=(scale, 'last'),
+        number_of_incidents=('Severity', 'count'),
+        avg_severity=('Severity', 'mean'),
         lon=('Start_Lng', 'mean'),
         lat=('Start_Lat', 'mean')
     )
 
-selected_indc = st.selectbox("Indicator",
-        ('Count', 'Avg_Severity'))
+if agg_df.empty:
+    st.info("nothing to show!")
 
 with st.expander("DataFrame ⤵️"):
     st.dataframe(agg_df)
 
 midpoint = mpoint(agg_df["lat"], agg_df["lon"])
 
-STREAMLIT_STATIC_PATH = pathlib.Path(st.__path__[0]) / "static"
-# We create a downloads directory within the streamlit static asset directory
-# and we write output files to it
-DOWNLOADS_PATH = STREAMLIT_STATIC_PATH / "downloads"
-if not DOWNLOADS_PATH.is_dir():
-    DOWNLOADS_PATH.mkdir()
-
-@st.cache
-def get_geom_data(category):
-
-    prefix = (
-        "https://raw.githubusercontent.com/giswqs/streamlit-geospatial/master/data/"
-    )
-    links = {
-        "national": prefix + "us_nation.geojson",
-        "state": prefix + "us_states.geojson",
-        "county": prefix + "us_counties.geojson",
-        "metro": prefix + "us_metro_areas.geojson",
-        "zip": "https://www2.census.gov/geo/tiger/GENZ2018/shp/cb_2018_us_zcta510_500k.zip",
-    }
-
-    if category.lower() == "zipcode":
-        r = requests.get(links["zip"])
-        out_zip = os.path.join(DOWNLOADS_PATH, "cb_2018_us_zcta510_500k.zip")
-        with open(out_zip, "wb") as code:
-            code.write(r.content)
-        zip_ref = zipfile.ZipFile(out_zip, "r")
-        zip_ref.extractall(DOWNLOADS_PATH)
-        gdf = gpd.read_file(out_zip.replace("zip", "shp"))
-    else:
-        gdf = gpd.read_file(links[category])
-    return gdf
-
-# FIXME: check either can to cache or not
-@st.cache
-def get_inventory_data(df, scale):
-    if scale == "county":
-    #     # df["county_fips"] = df["County"].map(str)
-    #     # df["county_fips"] = df["county_fips"].str.zfill(5)
-        df["county_name"] = df["Scale"]
-    elif scale == "state":
-        df["STUSPS"] = df["Scale"].str.upper()
-    elif scale == "zipcode":
-        df["postal_code"] = df["Scale"]
-        # df["postal_code"] = df["postal_code"].map(str)
-        # df["postal_code"] = df["postal_code"].str.zfill(5)
-
-    return df
-
-def join_attributes(gdf, df, category):
-
-    new_gdf = None
-    if category == "county":
-        new_gdf = gdf.merge(df, left_on="NAME", right_on="county_name", how="inner")
-    elif category == "state":
-        new_gdf = gdf.merge(df, left_on="STUSPS", right_on="STUSPS", how="outer")
-    # elif category == "national":
-    #     if "geo_country" in df.columns.values.tolist():
-    #         df["country"] = None
-    #         df.loc[0, "country"] = "United States"
-    #     new_gdf = gdf.merge(df, left_on="NAME", right_on="country", how="outer")
-    # elif category == "metro":
-    #     new_gdf = gdf.merge(df, left_on="CBSAFP", right_on="cbsa_code", how="outer")
-    elif category == "zipcode":
-        new_gdf = gdf.merge(df, left_on="GEOID10", right_on="postal_code", how="outer")
-    return new_gdf
 
 
-def select_non_null(gdf, col_name):
-    new_gdf = gdf[~gdf[col_name].isna()]
-    return new_gdf
-
-def select_null(gdf, col_name):
-    new_gdf = gdf[gdf[col_name].isna()]
-    return new_gdf
 
 
+row2_col1, row2_col2, row2_col3 = st.columns(
+    [1, 2, 1]
+)
 
 palettes = cm.list_colormaps()
-palette = st.selectbox("Color palette", palettes, index=palettes.index("Blues"))
-n_colors = st.slider("Number of colors", min_value=2, max_value=20, value=8)
+with row2_col1:
+    palette = st.selectbox("Color palette", palettes, index=palettes.index("Blues"))
+with row2_col2:
+    n_colors = st.slider("Number of colors", min_value=2, max_value=20, value=8)
+with row2_col3:
+    st.info("Hold CTRL and Left Click to rotate the view!")
 
 colors = cm.get_palette(palette, n_colors)
 colors = [hex_to_rgb(c) for c in colors]
@@ -143,8 +81,8 @@ gdf = get_geom_data(scale.lower())
 gdf = join_attributes(gdf, inventory_df, scale.lower())
 
 
-gdf_null = select_null(gdf, selected_indc)
 gdf = select_non_null(gdf, selected_indc)
+gdf = gdf.sort_values(by=selected_indc, ascending=True)
 
 for i, ind in enumerate(gdf.index):
     index = int(i / (len(gdf) / len(colors)))
@@ -157,10 +95,9 @@ for i, ind in enumerate(gdf.index):
 
 min_value = gdf[selected_indc].min()
 max_value = gdf[selected_indc].max()
-color = "color"
-# color_exp = f"[({selected_indc}-{min_value})/({max_value}-{min_value})*255, 0, 0]"
 color_exp = f"[R, G, B]"
 
+elevation = 300 if selected_indc == 'number_of_incidents' else 50000
 geojson = pdk.Layer(
     "GeoJsonLayer",
     gdf,
@@ -171,38 +108,53 @@ geojson = pdk.Layer(
     extruded=True,
     wireframe=True,
     get_elevation=selected_indc,
-    elevation_scale=1000,
+    elevation_scale=elevation,
     get_fill_color=color_exp,
-    # get_fill_color=color_exp,
     get_line_color=[0, 0, 0],
     get_line_width=2,
     line_width_min_pixels=1,
 )
 
-st.pydeck_chart(pdk.Deck(
-    map_style="mapbox://styles/mapbox/light-v9",
-    initial_view_state=pdk.ViewState(
-        latitude=midpoint[0],
-        longitude=midpoint[1],
-        zoom=2.5,
-        pitch=40,
-    ),
-    layers=[geojson],
-))
 
-st.write(
-    cm.create_colormap(
-        palette,
-        label=selected_indc.replace("_", " ").title(),
-        width=0.2,
-        height=3,
-        orientation="vertical",
-        vmin=min_value,
-        vmax=max_value,
-        font_size=10,
-    )
+row3_col1, row3_col2 = st.columns(
+    [6, 1]
 )
+
+# tooltip_value = f"<b>Value:</b> {median_listing_price}""
+tooltip = {
+    "html": "<b>Name:</b> {Name}<br><b>Value:</b> {"
+    + selected_indc
+    + "}",
+    "style": {"backgroundColor": "steelblue", "color": "white"},
+}
+
+with row3_col1:
+    st.pydeck_chart(pdk.Deck(
+        map_style="mapbox://styles/mapbox/light-v9",
+        initial_view_state=pdk.ViewState(
+            latitude=midpoint[0],
+            longitude=midpoint[1],
+            zoom=3.35,
+            pitch=40,
+        ),
+        layers=[geojson],
+        tooltip=tooltip
+    ))
+
+with row3_col2:
+    st.write(
+        cm.create_colormap(
+            palette,
+            label=selected_indc.replace("_", " ").title(),
+            width=0.2,
+            height=3,
+            orientation="vertical",
+            vmin=min_value,
+            vmax=max_value,
+            font_size=10,
+        )
+    )
 # TODO: by City, Zipcode
-# TODO: Clean Design
 # TODO: Clean code 
 # TODO: Add documentation
+# TODO: Add more columns
