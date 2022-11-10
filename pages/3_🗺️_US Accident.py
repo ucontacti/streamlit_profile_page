@@ -23,7 +23,7 @@ st.markdown(
 @st.cache
 def read_and_retrieve():
     '''Read the US 2016-2021 accident records'''
-    data = pd.read_csv('../US_Accidents_Dec21_updated.csv',
+    data = pd.read_csv('data/US_Accidents_Dec21_updated.csv',
             # nrows=10000,
             usecols=['Start_Lng', 'Start_Lat', 'Severity', 'County', 'State', 'Zipcode', 'Start_Time']
             )
