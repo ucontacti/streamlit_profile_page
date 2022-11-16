@@ -8,7 +8,12 @@ from utils.pydeck_util import mpoint, get_geom_data, \
                             get_inventory_data, select_non_null,\
                             join_attributes
 
-st.set_page_config(layout="wide")
+st.set_page_config(
+    layout="wide",
+    page_icon='assets/favicon.png'
+)
+with open('styles/main.css') as f:
+    st.markdown("<style>{}</style>".format(f.read()), unsafe_allow_html=True)
 
 st.markdown('### Interactive dashboard for US incdinets from 2016-2021')
 st.markdown(

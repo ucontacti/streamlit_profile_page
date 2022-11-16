@@ -10,7 +10,12 @@ from utils.sentiment_analyzer import text_cleaner, lemmatize_text, \
 								getPolarity, getPolAnalysis, \
 								getSubjectivity, getSubAnalysis
 
-st.set_page_config(layout="wide")
+st.set_page_config(
+    layout="wide",
+    page_icon='assets/favicon.png'
+)
+with open('styles/main.css') as f:
+    st.markdown("<style>{}</style>".format(f.read()), unsafe_allow_html=True)
 
 st.markdown('### Twitter hot topic Sentimental Analysis')
 st.markdown(
