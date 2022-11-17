@@ -2,6 +2,7 @@ import streamlit as st
 
 
 st.set_page_config(
+    page_title='Saleh Daghigh | Digital CV',
     layout="centered",
     page_icon='assets/favicon.png'
 )

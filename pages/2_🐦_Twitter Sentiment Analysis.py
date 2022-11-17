@@ -11,6 +11,7 @@ from utils.sentiment_analyzer import text_cleaner, lemmatize_text, \
 								getSubjectivity, getSubAnalysis
 
 st.set_page_config(
+    page_title='Twitter Sentiment Analysis',
     layout="wide",
     page_icon='assets/favicon.png'
 )

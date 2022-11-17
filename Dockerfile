@@ -31,4 +31,4 @@ RUN python -m nltk.downloader wordnet
 RUN python -m nltk.downloader omw-1.4
 RUN python -m nltk.downloader stopwords
 
-ENTRYPOINT ["streamlit", "run", "1_🏠_Homepage.py", "--server.port=8501", "--server.address=0.0.0.0"]
+# ENTRYPOINT ["streamlit", "run", "1_🏠_Homepage.py", "--server.port=8501", "--server.address=0.0.0.0"]d

@@ -9,6 +9,7 @@ from utils.pydeck_util import mpoint, get_geom_data, \
                             join_attributes
 
 st.set_page_config(
+    page_title='US Accident',
     layout="wide",
     page_icon='assets/favicon.png'
 )
