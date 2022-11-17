@@ -1,6 +1,6 @@
 # Streamlit Gallery for various project
 This repo includes a colelction of different topics that I thought are cool and fast to implement. I hope you can find these dashboards useful. 
-Web app is available in this [link](http://132.145.255.177:8501/).
+Web app is available in this [link](https://data-chamber.de/).
 ## Running locally
 <p>You need to place your Tweepy tokens in "config/tweepy_token.py"</p>
 <p>Also you need to download and store US Accident database into  "data/US_Accidents_Dec21_updated.csv"</p>
