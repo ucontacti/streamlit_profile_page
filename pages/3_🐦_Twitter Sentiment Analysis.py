@@ -4,6 +4,8 @@ import json
 import pandas as pd
 import requests
 import matplotlib.pyplot as plt
+from ipyvizzu import Chart, Data, Config, Style
+from streamlit.components.v1 import html
 
 from config import tweepy_token
 from utils.sentiment_analyzer import text_cleaner, lemmatize_text, \
@@ -22,7 +24,7 @@ st.markdown('### Twitter hot topic Sentimental Analysis')
 st.markdown(
     """ An interactive Sentiment Analysis dashboard using twitter's latest trends. 
 		The code uses several open-source libraries such as [tweepy](https://www.tweepy.org/), 
-		[nltk](https://www.nltk.org/) and [textblob](https://textblob.readthedocs.io/en/dev/).
+		[nltk](https://www.nltk.org/), [textblob](https://textblob.readthedocs.io/en/dev/) and [ipyvizzu](https://github.com/vizzuhq/ipyvizzu).
 """
 )
 
@@ -51,6 +53,7 @@ loc_woeid_dict = {}
 for loc in locations:
 	if loc['placeType']['name'] == 'Country':
 		loc_woeid_dict[f"{loc['name']} ({loc['placeType']['name']})"] = loc['woeid']
+
 
 # Gets called if country changes
 def get_trending_topic(loc_woeid_dict):
@@ -107,28 +110,97 @@ if st.button('Press to apply sentiment analysis', disabled=st.session_state['df_
 	st.session_state.tweet_df["sub_obj"] = st.session_state.tweet_df["subjectivity"].apply(getSubAnalysis)
 	# st.dataframe(st.session_state.tweet_df)
 
+	# col1, col2 = st.columns(2)
+	# with col1:
+	# 	fig1, ax1 = plt.subplots()
+	# 	sent_percentage = st.session_state.tweet_df['sentiment'].value_counts()/sum(st.session_state.tweet_df['sentiment'].value_counts())
+	# 	labels = sent_percentage.keys()
+	# 	sizes = sent_percentage.values
+	# 	ax1.pie(sizes, labels=labels, autopct='%1.1f%%', startangle=90)
+	# 	ax1.axis('equal') 
+	# 	plt.title('Sentiment Pie Chart')
+		
+	# 	st.pyplot(fig1)
+
+	# with col2:
+	# 	fig1, ax1 = plt.subplots()
+	# 	sent_percentage = st.session_state.tweet_df['sub_obj'].value_counts()/sum(st.session_state.tweet_df['sub_obj'].value_counts())
+	# 	labels = sent_percentage.keys()
+	# 	sizes = sent_percentage.values
+	# 	ax1.pie(sizes, labels=labels, autopct='%1.1f%%', startangle=90)
+	# 	ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
+	# 	plt.title('Subjectivity Pie Chart')
+		
+	# 	st.pyplot(fig1)
+
+
 	col1, col2 = st.columns(2)
 	with col1:
-		fig1, ax1 = plt.subplots()
 		sent_percentage = st.session_state.tweet_df['sentiment'].value_counts()/sum(st.session_state.tweet_df['sentiment'].value_counts())
-		labels = sent_percentage.keys()
-		sizes = sent_percentage.values
-		ax1.pie(sizes, labels=labels, autopct='%1.1f%%', startangle=90)
-		ax1.axis('equal') 
-		plt.title('Sentiment Pie Chart')
-		
-		st.pyplot(fig1)
+		labels = sent_percentage.keys().tolist()
+		sizes = sent_percentage.values.tolist()
+
+		data = Data()
+		data.add_series('sentiment', labels, type='dimension')
+		data.add_series('Percentage', sizes, type='measure')
+
+		chart = Chart(width="600px", height="600px",display="manual")
+		chart.animate(data)
+
+		chart.animate(
+			Config(
+				{
+					"channels": {
+						"x": {"set": ["sentiment", "Percentage"]},
+						"color": {"set": ["sentiment"]},
+						"label": {"set": ["Percentage"]},
+					},
+					"title": "Sentiment Pie Chart",
+					"coordSystem": "polar",
+				}
+				
+			)
+		)
+		chart.animate(
+			Config({"channels": {"y": {"range": {"min": "-200%"}}}, "title": "Sentiment Donut"})
+			,y={
+        		"duration": 5,   
+    		}
+		)
+		html(chart._repr_html_(),width=600, height=600)
 
 	with col2:
-		fig1, ax1 = plt.subplots()
 		sent_percentage = st.session_state.tweet_df['sub_obj'].value_counts()/sum(st.session_state.tweet_df['sub_obj'].value_counts())
-		labels = sent_percentage.keys()
-		sizes = sent_percentage.values
-		ax1.pie(sizes, labels=labels, autopct='%1.1f%%', startangle=90)
-		ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
-		plt.title('Subjectivity Pie Chart')
-		
-		st.pyplot(fig1)
+		labels = sent_percentage.keys().tolist()
+		sizes = sent_percentage.values.tolist()
 
+		data = Data()
+		data.add_series('subj', labels, type='dimension')
+		data.add_series('Percentage', sizes, type='measure')
+
+		chart = Chart(width="600px", height="600px",display="manual")
+		chart.animate(data)
+
+		chart.animate(
+			Config(
+				{
+					"channels": {
+						"x": {"set": ["subj", "Percentage"]},
+						"color": {"set": ["subj"]},
+						"label": {"set": ["Percentage"]},
+					},
+					"title": "Subjectivity Pie Chart",
+					"coordSystem": "polar",
+				}
+			)
+		)
+		chart.animate(
+			Config({"channels": {"y": {"range": {"min": "-200%"}}}, "title": "Subjectivity Donut"})
+			,y={
+        		"duration": 5,   
+				"delay": 5
+    		}
+		)
+		html(chart._repr_html_(),width=600, height=600)
 
 # TODO: make second for pure text

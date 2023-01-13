@@ -23,7 +23,7 @@ with col2:
     st.download_button(
         label=" 📄 Download Resume",
         data=PDFbyte,
-        file_name='Saleh_Daghigh_CV',
+        file_name='Saleh_Daghigh_CV.pdf',
         mime="application/octet-stream",
     )
     st.write("📫", 'ucontacti2012@gmail.com')
@@ -48,7 +48,7 @@ st.write(
 - 🧠 Machine Learning Tools: Tensorflow, Keras, Numpy, Pandas
 - 📊 Data Visulization: Streamlit, Matplotlib, Seaborn, Pydeck
 - ☁️ Cloud-Based Technologies: Google Cloud Platform, Docker
-- 🗄️ Databases: BigQuery, MySQL
+- 🗄️ Data Warehouse: BigQuery, MySQL
 """
 )
 
