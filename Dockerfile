@@ -12,7 +12,12 @@ RUN apt-get update && apt-get install -y \
     git \
     && rm -rf /var/lib/apt/lists/*
 
-# RUN git clone https://github.com/ucontacti/streamlit_profile_page .
+RUN pip install --upgrade pip
+
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
+
+ENV PATH="/root/.cargo/bin:${PATH}"
+
 COPY . .
 
 # RUN /usr/local/bin/python -m pip install --upgrade pip
