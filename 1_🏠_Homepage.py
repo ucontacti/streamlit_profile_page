@@ -25,6 +25,7 @@ with col2:
         data=PDFbyte,
         file_name='Saleh_Daghigh_CV.pdf',
         mime="application/octet-stream",
+        disabled=True
     )
     st.write("📫", 'ucontacti2012@gmail.com')
 
